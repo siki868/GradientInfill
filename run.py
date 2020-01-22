@@ -2,6 +2,7 @@ import re
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+from shapely.geometry import LineString, MultiPoint
 
 # Treba da se popravi
 def get_block_between(start, end, data):
@@ -46,35 +47,36 @@ def get_e(line):
 
 
 def interpolate(p1, p2, nb_steps, e=1.04099):
-    print(p1, p2)
-    plt.plot(p1, p2, 'og-')
-    x1, x2, y1, y2 = p1[0], p2[0], p1[1], p2[1]
+    x1, y1, x2, y2 = p1[0], p1[1], p2[0], p2[1]
+    plt.plot([x1, x2], [y1, y2])
 
-    length = math.hypot(x2 - x1, y2 - y1)
-    print(f'Len {length}')
-    step_length = length / (nb_steps*2)
-    print(f'Step len {step_length}')
-    step_size = (x2-x1) / (nb_steps*2)
-    print(f'Step size {step_size}')
+    # Segmentacija linije (sve tacke osim prve)
+    line = LineString([p1, p2])
+    splitter = MultiPoint([line.interpolate((i/nb_steps), normalized=True) for i in range(1, nb_steps+1)])
 
-    e_step_size = e / nb_steps
+    xs = [point.x for point in splitter]
+    ys = [point.y for point in splitter]
 
-    # Svi preseci prave izmedju p1 i p2 (za svaki treba da se izr E)\
-
-    # prva polovina
-    for i in range(1, nb_steps + 1):
-        new_x = x1 + i * step_size
-        new_y = np.interp(new_x, p1, p2)
-        plt.plot(new_x, new_y, 'or')
-
-    for i in range(nb_steps + 1, nb_steps*2):
-        new_x = x1 + i * step_size
-        new_y = np.interp(new_x, p1, p2)
-        plt.plot(new_x, new_y, 'or')
+    # Izbacivanje srednje tacke jer je e isto 
+    xs.pop((len(xs)-1)//2)
+    ys.pop((len(ys)-1)//2)
 
 
+    plt.scatter(xs, ys)
 
-    plt.show()
+    # racunanje svih e-ova
+    e_step = e / (nb_steps//2)
+    es = []
+    for i in range(nb_steps//2):
+        es.append(e - i*e_step)
+    es.extend(es[::-1])
+
+    # G1 F600 X93.508 Y90.68 E1.516
+    for ex, point in zip(es, splitter):
+        l = f'G1 F600 X{round(point.x, 3)} Y{round(point.y, 3)} E{round(ex, 5)}'
+        # print(l)
+
+
 
 def main():
     with open('in1.gcode', 'r') as f:
@@ -95,12 +97,23 @@ def test():
     with open('in2.gcode', 'r') as f:
         data = f.read()
         wall_block = get_block_between(';TYPE:WALL-OUTER', ';TYPE:FILL', data)
-        infill_block = get_block_between(';TYPE:FILL', ';', data)
+        infill_block = get_block_between(';TYPE:FILL', ';TIME_ELAPSED', data)
 
-        print(len(wall_block), len(infill_block))
 
-        # p1, p2 = get_xy(wall_block[-1]), get_xy(infill_block[0])
-        # interpolate(p1, p2 , 3)
+        # print(wall_block[-1])
+        prev_xy = get_xy(wall_block[-1])
+
+        for line in infill_block:
+            if 'E' in line and 'X' in line and 'Y' in line:
+                interpolate(prev_xy, get_xy(line), 6, e=get_e(line))
+            elif 'X' in line or 'Y' in line:
+                prev_xy = get_xy(line)
+
+
+        # interpolate(p1, p2 , 6)
+        plt.show()
+
+
 if __name__ == "__main__":
 
     test()
