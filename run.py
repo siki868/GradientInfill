@@ -98,7 +98,7 @@ def interpolate(p1, p2, nb_steps, e):
 
     return ret
 
-def main():
+def test():
     with open('in1.gcode', 'r') as f:
         data = f.read()
         wall_block = get_block_between(';TYPE:WALL-OUTER', ';TYPE:FILL', data)
