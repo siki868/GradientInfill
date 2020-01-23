@@ -113,7 +113,7 @@ def main():
                 last_xy = get_xy(line)
 
 
-def test():
+def main():
     with open('in3.gcode', 'r') as f, open('out.gcode', 'w') as w_f:
         data = f.read()
         lines = data.split('\n')
@@ -156,4 +156,4 @@ def test():
 
 if __name__ == "__main__":
 
-    test()
+    main()
