@@ -1,5 +1,5 @@
 # GradientInfill
 Gradient infill for gcode files
 
-# Config
-  '''pip install shapely'''
+## Config
+  ```pip install shapely```
