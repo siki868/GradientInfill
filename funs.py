@@ -1,10 +1,13 @@
 import re
-import numpy as np
-import matplotlib.pyplot as plt
 import math
 from shapely.geometry import LineString, MultiPoint
 
+
+
 def get_block_between(start, end, data):
+    '''
+    Vraca block texta izmedju start i enda (sad ga samo koristimo za WALL-OUTER da bi znali poslednje xy)
+    '''
     if end == ';TIME_ELAPSED':
         ret = []
         data = data.split('\n')
@@ -42,6 +45,9 @@ def get_block_between(start, end, data):
 
 
 def get_xy(line):
+    '''
+    Vraca X, Y iz linije
+    '''
     try:
         x = float(re.findall(r'[X](\d*\.*\d*)', line)[0])
     except:
@@ -54,14 +60,32 @@ def get_xy(line):
     return x, y
     
 def get_e(line):
+    '''
+    Vraca E iz linije
+    '''
     return float(re.findall(r'[E](\d*\.\d*)', line)[0])
 
 
 
 def interpolate(p1, p2, nb_steps, e):
+    '''
+    p1, p2 - tacke u obliku (x, y) gde masina crtna liniju od p1 do p2
+    nb_steps - na koliko delova se deli linija
+    e - kolicina filamenta na toj liniji
+
+    Vraca listu linija oblika ['G1 F600 Xnesto Ynesto Enesto', 'G1 F600 Xnesto2 Ynesto2 Enesto2'] - ret 
+        koje se upisuju umesto trenutne linije
+
+    Prvo pravimo liniju od tacaka, nalazimo njenu duzinum, ako je dobra duzina delimo je na tacke. 
+        (pointi u Splitteru)
+    
+    Onda racunamo E u odnosu na staro tako da imamo njegove segmente -> 
+        ako je br segmenata 6 a E je 3 -> znaci da ce segmenat od e biti 3 / (6/2) tj 1
+    
+    Po ovome ce es da bude [3, 2, 1], sto je polovina linije, i za drugu polovinu ocemo obrnuto tj 
+        1 2 3 tako da es postaje [3, 2, 1, 1, 2 ,3]   
+    '''
     ret = []
-    x1, y1, x2, y2 = p1[0], p1[1], p2[0], p2[1]
-    plt.plot([x1, x2], [y1, y2])
 
     # Segmentacija linije (sve tacke osim prve)
     line = LineString([p1, p2])
@@ -69,16 +93,6 @@ def interpolate(p1, p2, nb_steps, e):
 
     if segment_length > 5.0:
         splitter = MultiPoint([line.interpolate((i/nb_steps), normalized=True) for i in range(1, nb_steps+1)])
-
-        xs = [point.x for point in splitter]
-        ys = [point.y for point in splitter]
-
-        # Izbacivanje srednje tacke jer je e isto 
-        xs.pop((len(xs)-1)//2)
-        ys.pop((len(ys)-1)//2)
-
-
-        plt.scatter(xs, ys)
 
         # racunanje svih e-ova
         e_step = e / (nb_steps//2)
