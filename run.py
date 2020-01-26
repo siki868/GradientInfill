@@ -1,5 +1,5 @@
 from funs import get_block_between, get_e, get_xy, interpolate
-from tkinter import *
+from tkinter import Label, Entry, Button, mainloop, Tk, W, END
 from tkinter import filedialog
 from tkinter.filedialog import askdirectory
 
